@@ -7,6 +7,11 @@ dependencies = [
     "uuid7>=0.1.0",
     "anyio>=4.0.0",
     "reboot==1.4.0",
+    # The OpenRouter provider for `reboot.agents.pydantic_ai.Agent`, used
+    # only by the Spotify guest-name inference. Pinned to the exact
+    # version `reboot==1.4.0` already resolves, so adding the extra pulls
+    # in the provider client without moving pydantic-ai itself.
+    "pydantic-ai-slim[openrouter]==1.87.0",
 ]
 
 [dependency-groups]

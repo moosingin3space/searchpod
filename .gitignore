@@ -5,7 +5,9 @@
 backend/api/
 frontend/api/
 
-# Secrets.
+# Secrets. Secrets live age-encrypted in `fnox.toml` and are injected by
+# `fnox exec --` (see `.rbtrc`); there is no `.env` file. This stays
+# ignored so a stray one can never be committed by accident.
 .env
 
 # Python virtual environment and caches.

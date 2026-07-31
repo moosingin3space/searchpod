@@ -16,9 +16,22 @@ dev run --python
 # Save state between restarts.
 dev run --application-name=searchpod
 
-# Load secrets from a git-ignored env file. Put one KEY=VALUE line
-# per secret in `.env`, and add `.env` to `.gitignore`.
-dev run --env-file=.env
+# SECRETS: there is deliberately NO `dev run --env-file=.env` line, and
+# no `.env` file. Secrets (SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET,
+# OPENROUTER_API_KEY, BRIGHTDATA_API_TOKEN) are age-encrypted in
+# `fnox.toml` and injected into the process environment by `fnox exec`.
+# The application still reads them the ordinary Reboot way, with
+# `os.environ["..."]` — only the delivery mechanism changed.
+#
+# `.rbtrc` is line-based `<subcommand> <flag>` config for the `rbt` CLI;
+# it has no way to express a launch wrapper, so this has to be part of
+# the command you type:
+#
+#     fnox exec -- uv run rbt dev run
+#
+# Running plain `uv run rbt dev run` starts the app with the Spotify and
+# OpenRouter secrets absent; the catalog still works, but any Spotify
+# lookup fails with a KeyError.
 
 # Run the application!
 dev run --application=backend/src/main.py

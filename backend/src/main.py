@@ -14,7 +14,10 @@ from reboot.std.collections.ordered_map.v1.ordered_map import (
 
 from searchpod.v1.podcasts import DIRECTORY_ID
 from searchpod.v1.podcasts_rbt import Directory
+from searchpod.v1.spotify import SPOTIFY_LOOKUP_ID, SPOTIFY_TOKEN_ID
+from searchpod.v1.spotify_rbt import SpotifyLookup, SpotifyToken
 from servicers.podcasts import APPLICATION_SERVICERS
+from servicers.spotify import SPOTIFY_SERVICERS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,8 +31,16 @@ async def initialize(context: InitializeContext) -> None:
     Unlike a typical chat app, searchpod's catalog is shared rather than
     per-user, so it needs a singleton that no `User` method creates.
     `create` is idempotent, so this is safe on every restart.
+
+    The two Spotify singletons are brought up the same way. They are
+    separate from the catalog on purpose: Spotify results are looked up
+    live and never stored (see `api/searchpod/v1/spotify.py`), so
+    `SpotifyLookup` holds no state at all, and `SpotifyToken` holds only
+    the app's own OAuth access token.
     """
     await Directory.create(context, DIRECTORY_ID)
+    await SpotifyLookup.create(context, SPOTIFY_LOOKUP_ID)
+    await SpotifyToken.create(context, SPOTIFY_TOKEN_ID)
 
 
 async def main() -> None:
@@ -40,7 +51,7 @@ async def main() -> None:
             "discussed something, when in the episode it came up, and who "
             "the guest was."
         ),
-        servicers=APPLICATION_SERVICERS,
+        servicers=APPLICATION_SERVICERS + SPOTIFY_SERVICERS,
         libraries=[ordered_map_library()],
         initialize=initialize,
         example_prompts=example_prompts,
