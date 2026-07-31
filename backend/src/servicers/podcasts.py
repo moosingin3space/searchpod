@@ -29,7 +29,10 @@ from reboot.aio.contexts import (
     TransactionContext,
     WriterContext,
 )
-from reboot.std.collections.ordered_map.v1.ordered_map import OrderedMap
+from reboot.std.collections.ordered_map.v1.ordered_map import (
+    DEFAULT_DEGREE,
+    OrderedMap,
+)
 from uuid7 import create as uuid7
 
 from searchpod.v1.podcasts import (
@@ -56,6 +59,14 @@ from searchpod.v1.podcasts_rbt import (
 # engine; the cap keeps a pathological catalog from turning one tool call
 # into an unbounded scan.
 MAX_NAME_SCAN = 1024
+
+# `OrderedMap.create()` MUST be passed an explicit `degree`. Called without
+# one, the stdlib sets its own state to the default but forwards the *unset*
+# request field to the map's root node, which lands there as degree 0 — and
+# the first insert into a degree-0 node splits forever without terminating.
+# Take the value from the stdlib so our explicitly-constructed maps can't
+# silently desync from implicitly-constructed ones if it ever changes.
+ORDERED_MAP_DEGREE = DEFAULT_DEGREE
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +95,15 @@ def next_cursor(entries: Sequence[Any], limit: int) -> str:
     seen plus the lowest possible code point — the smallest string
     strictly greater than that key. A short page means the scan reached
     the end, which is reported as an empty cursor.
+
+    TODO(frontend pass): this cursor is handed to the AI by the
+    `mcp=Tool()` readers and handed back verbatim. A NUL inside a JSON
+    string is legal but is a known breakage point for JS parsers and Zod,
+    so verify it survives the MCP boundary. If it does not, the exact
+    control-byte-free replacement is: return `last_key` unchanged, read
+    with `limit=PAGE_SIZE + 1`, drop the first entry when its key equals
+    the incoming cursor, and only set a next cursor when the raw page
+    overflowed.
     """
     if len(entries) < limit:
         return ""
@@ -126,6 +146,21 @@ def catalog_authorizer() -> AuthorizerRule:
     return allow_if(any=[is_app_internal, has_verified_token])
 
 
+async def create_index(
+    context: TransactionContext,
+    index_id: str,
+) -> None:
+    """Construct an index actor up front.
+
+    Every index in this app is *read* before it is ever *written* — an
+    empty catalog gets browsed, a brand-new show gets dedup-searched — and
+    an OrderedMap reader aborts with `StateNotConstructed` against a map
+    that only ever would have been constructed by its first insert. So each
+    owner constructs its own indexes when it is created.
+    """
+    await OrderedMap.ref(index_id).create(context, degree=ORDERED_MAP_DEGREE)
+
+
 async def scan_index(
     context: ReaderContext,
     index: OrderedMap.WeakReference,
@@ -165,13 +200,16 @@ class DirectoryServicer(Directory.Servicer):
     def authorizer(self) -> AuthorizerRule:
         return catalog_authorizer()
 
-    async def create(self, context: WriterContext) -> None:
+    async def create(self, context: TransactionContext) -> None:
         if context.constructor:
-            # Just allocate the ids; each OrderedMap is constructed
-            # implicitly on its first insert.
             self.state.podcasts_by_feed_url_index_id = str(uuid4())
             self.state.people_by_name_index_id = str(uuid4())
             self.state.episodes_by_date_index_id = str(uuid4())
+            await create_index(
+                context, self.state.podcasts_by_feed_url_index_id,
+            )
+            await create_index(context, self.state.people_by_name_index_id)
+            await create_index(context, self.state.episodes_by_date_index_id)
 
     # -- Writes. --
 
@@ -483,7 +521,7 @@ class PodcastServicer(Podcast.Servicer):
 
     async def create(
         self,
-        context: WriterContext,
+        context: TransactionContext,
         request: Podcast.CreateRequest,
     ) -> None:
         if context.constructor:
@@ -492,6 +530,10 @@ class PodcastServicer(Podcast.Servicer):
             self.state.description = request.description
             self.state.episodes_index_id = str(uuid4())
             self.state.episodes_by_source_id_index_id = str(uuid4())
+            await create_index(context, self.state.episodes_index_id)
+            await create_index(
+                context, self.state.episodes_by_source_id_index_id,
+            )
 
     async def add_episode(
         self,
@@ -652,13 +694,14 @@ class PersonServicer(Person.Servicer):
 
     async def create(
         self,
-        context: WriterContext,
+        context: TransactionContext,
         request: Person.CreateRequest,
     ) -> None:
         if context.constructor:
             self.state.name = request.name
             self.state.bio = request.bio
             self.state.appearances_index_id = str(uuid4())
+            await create_index(context, self.state.appearances_index_id)
 
     async def record_appearance(
         self,

@@ -379,7 +379,10 @@ api = API(
     Directory=Type(
         state=DirectoryState,
         methods=Methods(
-            create=Writer(
+            # A Transaction rather than a Writer because it explicitly
+            # constructs the three index actors it owns, and constructing
+            # another actor is a cross-actor mutation.
+            create=Transaction(
                 request=None,
                 response=None,
                 factory=True,
@@ -475,7 +478,9 @@ api = API(
                     "its episode list."
                 ),
             ),
-            create=Writer(
+            # A Transaction rather than a Writer because it explicitly
+            # constructs this show's two index actors.
+            create=Transaction(
                 request=CreatePodcastRequest,
                 response=None,
                 factory=True,
@@ -559,7 +564,9 @@ api = API(
                     "episodes they have appeared on."
                 ),
             ),
-            create=Writer(
+            # A Transaction rather than a Writer because it explicitly
+            # constructs this person's appearance index actor.
+            create=Transaction(
                 request=CreatePersonRequest,
                 response=None,
                 factory=True,
