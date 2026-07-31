@@ -1,0 +1,125 @@
+.container {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 16px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--color-purple);
+  line-height: 1.3;
+}
+
+.description {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.feedUrl {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.episode {
+  background: var(--color-bg-dark);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.episodeTitle {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--color-blue);
+  line-height: 1.3;
+}
+
+.episodeMeta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.chapterCount {
+  color: var(--color-yellow);
+}
+
+.episodeDescription {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+  opacity: 0.85;
+}
+
+.pager {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pagerButton {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-dark);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pagerButton:hover:not(:disabled) {
+  border-color: var(--color-blue);
+  color: var(--color-blue);
+}
+
+.pagerButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.notice {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 8px 0;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--color-pink);
+  padding: 8px 0;
+}

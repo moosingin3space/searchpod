@@ -96,14 +96,21 @@ def next_cursor(entries: Sequence[Any], limit: int) -> str:
     strictly greater than that key. A short page means the scan reached
     the end, which is reported as an empty cursor.
 
-    TODO(frontend pass): this cursor is handed to the AI by the
-    `mcp=Tool()` readers and handed back verbatim. A NUL inside a JSON
-    string is legal but is a known breakage point for JS parsers and Zod,
-    so verify it survives the MCP boundary. If it does not, the exact
-    control-byte-free replacement is: return `last_key` unchanged, read
-    with `limit=PAGE_SIZE + 1`, drop the first entry when its key equals
-    the incoming cursor, and only set a next cursor when the raw page
-    overflowed.
+    The NUL suffix was flagged as a possible breakage point at the MCP
+    boundary — the cursor is handed to the AI by the `mcp=Tool()` readers
+    and handed back verbatim, and NUL is a known trip point for JS
+    parsers and Zod. Verified against a running app rather than assumed:
+    a `directory_list_podcasts` call over the real `/mcp` JSON-RPC
+    endpoint returns the cursor escaped as `\\u0000`, and feeding it back
+    yields the correctly adjacent page (32 + 4 podcasts, no overlap).
+    `JSON.parse` round-trips it and Zod 4's `z.string()` accepts it. So
+    the suffix stays.
+
+    Should that ever stop holding, the control-byte-free replacement is:
+    return `last_key` unchanged, read with `limit=PAGE_SIZE + 1`, drop
+    the first entry when its key equals the incoming cursor, and only set
+    a next cursor when the raw page overflowed — note that this changes
+    every paginated reader's call site, not just this helper.
     """
     if len(entries) < limit:
         return ""
